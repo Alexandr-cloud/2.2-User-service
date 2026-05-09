@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD//EN"
+        "http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+    <session-factory>
+        <!-- JDBC-драйвер PostgreSQL -->
+        <property name="hibernate.connection.driver_class">org.postgresql.Driver</property>
+        <!-- URL подключения: протокол, хост, порт, имя базы -->
+        <property name="hibernate.connection.url">jdbc:postgresql://localhost:5432/userdb</property>
+        <!-- Имя пользователя (по умолчанию postgres) -->
+        <property name="hibernate.connection.username">postgres</property>
+        <!-- Пароль, который мы задали при запуске Docker -->
+        <property name="hibernate.connection.password">mysecretpassword</property>
+
+        <!-- Диалект: говорит Hibernate, какой SQL-диалект использовать для PostgreSQL -->
+        <property name="hibernate.dialect">org.hibernate.dialect.PostgreSQLDialect</property>
+
+        <!-- Настройки пула соединений HikariCP -->
+        <property name="hibernate.hikari.minimumIdle">5</property>
+        <property name="hibernate.hikari.maximumPoolSize">10</property>
+
+        <!-- Для разработки: показывать SQL в консоли -->
+        <property name="hibernate.show_sql">true</property>
+        <property name="hibernate.format_sql">true</property>
+
+        <!-- Авто-создание/обновление схемы: update – сохраняет данные -->
+        <property name="hibernate.hbm2ddl.auto">update</property>
+
+        <!-- Режим привязки сессии к текущему потоку -->
+        <property name="hibernate.current_session_context_class">thread</property>
+
+        <!-- Список классов-сущностей (обязательно перечислить) -->
+        <mapping class="com.aston.entity.User"/>
+    </session-factory>
+</hibernate-configuration>
