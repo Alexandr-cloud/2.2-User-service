@@ -1,7 +1,7 @@
 package com.aston.service;
 
-import com.aston.dao.UserDao;
 import com.aston.entity.User;
+import com.aston.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -23,7 +23,7 @@ import static org.mockito.Mockito.*;
 class UserServiceTest {
 
     @Mock
-    private UserDao userDao;
+    private UserRepository userRepository;
 
     @InjectMocks
     private UserService userService;
@@ -42,7 +42,7 @@ class UserServiceTest {
             User expectedUser = new User(name, email, age);
             expectedUser.setId(1L);
 
-            when(userDao.save(any(User.class))).thenReturn(expectedUser);
+            when(userRepository.save(any(User.class))).thenReturn(expectedUser);
             User result = userService.createUser(name, email, age);
 
             assertNotNull(result);
@@ -51,7 +51,7 @@ class UserServiceTest {
             assertEquals(email, result.getEmail());
             assertEquals(age, result.getAge());
 
-            verify(userDao, times(1)).save(any(User.class));
+            verify(userRepository, times(1)).save(any(User.class));
         }
     }
 
@@ -70,7 +70,7 @@ class UserServiceTest {
                     userService.createUser(name, email, age)
             );
 
-            verify(userDao, never()).save(any(User.class));
+            verify(userRepository, never()).save(any(User.class));
         }
 
         @Test
@@ -84,7 +84,7 @@ class UserServiceTest {
                     userService.createUser(name, email, age)
             );
 
-            verify(userDao, never()).save(any(User.class));
+            verify(userRepository, never()).save(any(User.class));
         }
 
         @Test
@@ -98,7 +98,7 @@ class UserServiceTest {
                     userService.createUser(name, email, age)
             );
 
-            verify(userDao, never()).save(any(User.class));
+            verify(userRepository, never()).save(any(User.class));
         }
 
         @Test
@@ -112,10 +112,10 @@ class UserServiceTest {
                     userService.createUser(name, email, age)
             );
 
-            verify(userDao, never()).save(any(User.class));
+            verify(userRepository, never()).save(any(User.class));
         }
     }
-    
+
     @Nested
     @DisplayName("getUserById()")
     class GetUserByIdTests {
@@ -126,7 +126,7 @@ class UserServiceTest {
             Long userId = 1L;
             User user = new User("Иван", "ivan@mail.com", 25);
             user.setId(userId);
-            when(userDao.findById(userId)).thenReturn(Optional.of(user));
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
             Optional<User> result = userService.getUserById(userId);
 
@@ -134,20 +134,20 @@ class UserServiceTest {
             assertEquals(userId, result.get().getId());
             assertEquals("Иван", result.get().getName());
 
-            verify(userDao, times(1)).findById(userId);
+            verify(userRepository, times(1)).findById(userId);
         }
 
         @Test
         @DisplayName("Возвращает пустой Optional, когда пользователь не найден")
         void getUserById_WhenUserDoesNotExist_ShouldReturnEmpty() {
             Long userId = 999L;
-            when(userDao.findById(userId)).thenReturn(Optional.empty());
+            when(userRepository.findById(userId)).thenReturn(Optional.empty());
 
             Optional<User> result = userService.getUserById(userId);
 
             assertTrue(result.isEmpty());
 
-            verify(userDao, times(1)).findById(userId);
+            verify(userRepository, times(1)).findById(userId);
         }
     }
 
@@ -164,7 +164,7 @@ class UserServiceTest {
             user2.setId(2L);
             List<User> users = Arrays.asList(user1, user2);
 
-            when(userDao.findAll()).thenReturn(users);
+            when(userRepository.findAll()).thenReturn(users);
             List<User> result = userService.getAllUsers();
 
             assertNotNull(result);
@@ -172,20 +172,20 @@ class UserServiceTest {
             assertEquals("Иван", result.get(0).getName());
             assertEquals("Мария", result.get(1).getName());
 
-            verify(userDao, times(1)).findAll();
+            verify(userRepository, times(1)).findAll();
         }
 
         @Test
         @DisplayName("Возвращает пустой список, когда пользователей нет")
         void getAllUsers_WhenNoUsers_ShouldReturnEmptyList() {
-            when(userDao.findAll()).thenReturn(List.of());
+            when(userRepository.findAll()).thenReturn(List.of());
 
             List<User> result = userService.getAllUsers();
 
             assertNotNull(result);
             assertTrue(result.isEmpty());
 
-            verify(userDao, times(1)).findAll();
+            verify(userRepository, times(1)).findAll();
         }
     }
 
@@ -199,12 +199,13 @@ class UserServiceTest {
             User user = new User("Иван", "ivan@mail.com", 25);
             user.setId(1L);
 
-            when(userDao.findById(1L)).thenReturn(Optional.of(user));
-            doNothing().when(userDao).update(user);
+            when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+            when(userRepository.save(any(User.class))).thenReturn(user);
 
             userService.updateUser(user);
 
-            verify(userDao, times(1)).update(user);
+            verify(userRepository, times(1)).findById(1L);
+            verify(userRepository, times(1)).save(user);
         }
 
         @Test
@@ -217,7 +218,7 @@ class UserServiceTest {
                     userService.updateUser(user)
             );
 
-            verify(userDao, never()).update(any());
+            verify(userRepository, never()).save(any());
         }
     }
 
@@ -232,12 +233,13 @@ class UserServiceTest {
             User user = new User("Иван", "ivan@mail.com", 25);
             user.setId(userId);
 
-            when(userDao.findById(userId)).thenReturn(Optional.of(user));
-            doNothing().when(userDao).delete(userId);
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+            doNothing().when(userRepository).deleteById(userId);
 
             userService.deleteUser(userId);
 
-            verify(userDao, times(1)).delete(userId);
+            verify(userRepository, times(1)).findById(userId);
+            verify(userRepository, times(1)).deleteById(userId);
         }
 
         @Test
@@ -247,7 +249,7 @@ class UserServiceTest {
                     userService.deleteUser(null)
             );
 
-            verify(userDao, never()).delete(any());
+            verify(userRepository, never()).deleteById(any());
         }
     }
 }
