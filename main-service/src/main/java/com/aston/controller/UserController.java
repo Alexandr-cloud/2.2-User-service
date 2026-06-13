@@ -2,6 +2,7 @@ package com.aston.controller;
 
 import com.aston.dto.UserDto;
 import com.aston.entity.User;
+import com.aston.service.ExternalService;
 import com.aston.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -27,9 +28,11 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 public class UserController {
 
     private final UserService userService;
+    private final ExternalService externalService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, ExternalService externalService) {
         this.userService = userService;
+        this.externalService = externalService;
     }
 
     private UserDto toDto(User user) {
@@ -134,5 +137,12 @@ public class UserController {
             @Parameter(description = "ID пользователя") @PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Тест Circuit Breaker", description = "Вызов внешнего API с защитой Circuit Breaker")
+    @GetMapping("/test-circuit-breaker")
+    public ResponseEntity<String> testCircuitBreaker() {
+        String result = externalService.callExternalApi();
+        return ResponseEntity.ok(result);
     }
 }
