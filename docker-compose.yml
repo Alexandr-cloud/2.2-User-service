@@ -1,11 +1,35 @@
 services:
+  # ============ БАЗА ДАННЫХ ============
+  postgres:
+    image: postgres:15
+    container_name: user-db
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - microservices-network
+
+  # ============ ZOOKEEPER ============
   zookeeper:
     image: confluentinc/cp-zookeeper:6.2.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
     ports:
       - "2181:2181"
+    networks:
+      - microservices-network
 
+  # ============ KAFKA ============
   kafka:
     image: confluentinc/cp-kafka:6.2.0
     container_name: user-service-kafka-1
@@ -14,16 +38,103 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
     ports:
       - "9092:9092"
+    networks:
+      - microservices-network
 
+  # ============ MAILDEV ============
   maildev:
     image: maildev/maildev
     container_name: maildev
     ports:
       - "1080:1080"
       - "1025:1025"
+    networks:
+      - microservices-network
+
+  # ============ CONFIG SERVER ============
+  config-service:
+    build:
+      context: ./config-service
+      dockerfile: Dockerfile
+    container_name: config-service
+    ports:
+      - "8888:8888"
+    depends_on:
+      - postgres
+    networks:
+      - microservices-network
+
+  # ============ DISCOVERY (EUREKA) ============
+  discovery-service:
+    build:
+      context: ./discovery-service
+      dockerfile: Dockerfile
+    container_name: discovery-service
+    ports:
+      - "8761:8761"
+    depends_on:
+      - config-service
+    networks:
+      - microservices-network
+
+  # ============ MAIN SERVICE ============
+  main-service:
+    build:
+      context: ./main-service
+      dockerfile: Dockerfile
+    container_name: main-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - config-service
+      - discovery-service
+      - postgres
+      - kafka
+    networks:
+      - microservices-network
+
+  # ============ NOTIFICATION SERVICE ============
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - config-service
+      - discovery-service
+      - kafka
+    networks:
+      - microservices-network
+
+  # ============ GATEWAY ============
+  gateway-service:
+    build:
+      context: ./gateway-service
+      dockerfile: Dockerfile
+    container_name: gateway-service
+    ports:
+      - "8080:8080"
+    depends_on:
+      - config-service
+      - discovery-service
+      - main-service
+      - notification-service
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

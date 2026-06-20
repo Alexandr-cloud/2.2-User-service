@@ -30,3 +30,5 @@ build/
 
 ### Mac OS ###
 .DS_Storeuser-service-config/
+user-service-config/
+.env
